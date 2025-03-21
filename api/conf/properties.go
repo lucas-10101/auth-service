@@ -1,9 +1,5 @@
 package conf
 
-import (
-	"log/slog"
-)
-
 // General application properties
 
 type Properties struct {
@@ -26,21 +22,18 @@ type ServerProperties struct {
 
 type LogDriver string
 
-const (
-	MongoDBLogDriver = LogDriver("mongodb")
-	FileLogDriver    = LogDriver("file")
-	DummyLogDriver   = LogDriver("dummy")
-)
-
 type LoggerProperties struct {
 	// General
-	LogLevel  slog.Level
-	LogDriver LogDriver
+	LogLevel      int
+	LogDriver     string
+	AllowFallback bool // If log fails or is unavailable, use the following loggers in order: file, stdout. False is dummylogger
 
 	// File specific
 	FileName string
 
 	// MongoDB Specific
+	DatabaseName            string
+	CollectionName          string
 	MongoDbConnectionString string
 	MaxPoolSize             uint64
 	MinPoolSize             uint64

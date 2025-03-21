@@ -9,4 +9,5 @@ import (
 var (
 	ApplicationProperties *conf.Properties = &conf.Properties{}
 	Logger                *slog.Logger
+	FallbackLogger        *slog.Logger
 )
