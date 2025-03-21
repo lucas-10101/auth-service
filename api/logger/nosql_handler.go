@@ -26,6 +26,7 @@ func (logger *MongoDBLogHandler) Handle(ctx context.Context, record slog.Record)
 	collection := logger.getCollection()
 
 	_, err := collection.InsertOne(ctx, bson.D{
+		{Key: "app-name", Value: api.ApplicationProperties.AppName},
 		{Key: "time", Value: record.Time},
 		{Key: "level", Value: record.Level},
 		{Key: "group", Value: logger.groupName},

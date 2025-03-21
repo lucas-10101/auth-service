@@ -1,7 +1,6 @@
 package conf
 
 // General application properties
-
 type Properties struct {
 	AppName string
 
@@ -10,18 +9,17 @@ type Properties struct {
 }
 
 // Server properties and definitions
-
 type ServerProperties struct {
 	Address            string
-	Port               int
+	UseHttps           bool
+	RedirectHttps      bool
+	HttpPort           int
+	HttpsPort          int
 	TlsKeyPath         string
 	TlsCertificatePath string
 }
 
 // Log properties and definitions
-
-type LogDriver string
-
 type LoggerProperties struct {
 	// General
 	LogLevel      int
