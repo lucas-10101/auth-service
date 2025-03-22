@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/lucas-10101/auth-service/api"
+	"github.com/lucas-10101/auth-service/api/conf"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -26,7 +26,7 @@ func (logger *MongoDBLogHandler) Handle(ctx context.Context, record slog.Record)
 	collection := logger.getCollection()
 
 	_, err := collection.InsertOne(ctx, bson.D{
-		{Key: "app-name", Value: api.ApplicationProperties.AppName},
+		{Key: "app-name", Value: conf.ApplicationProperties.AppName},
 		{Key: "time", Value: record.Time},
 		{Key: "level", Value: record.Level},
 		{Key: "group", Value: logger.groupName},
@@ -65,6 +65,6 @@ func (logger *MongoDBLogHandler) WithGroup(name string) slog.Handler {
 
 func (logger *MongoDBLogHandler) getCollection() *mongo.Collection {
 	return logger.client.
-		Database(api.ApplicationProperties.LoggerProperties.DatabaseName).
-		Collection(api.ApplicationProperties.LoggerProperties.CollectionName)
+		Database(conf.ApplicationProperties.LoggerProperties.DatabaseName).
+		Collection(conf.ApplicationProperties.LoggerProperties.CollectionName)
 }

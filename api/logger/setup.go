@@ -2,46 +2,51 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
-	"github.com/lucas-10101/auth-service/api"
+	"github.com/lucas-10101/auth-service/api/conf"
+	"github.com/lucas-10101/auth-service/api/utils"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+var (
+	Logger         *slog.Logger
+	FallbackLogger *slog.Logger
+)
+
 // Configure application logger and fallback based on properties
 func Setup() {
 	// configure fallback first
-	api.FallbackLogger = getFallBackFileLogger()
+	FallbackLogger = getFallBackFileLogger()
 
-	switch api.ApplicationProperties.LoggerProperties.LogDriver {
+	switch conf.ApplicationProperties.LoggerProperties.LogDriver {
 	case "file":
-		api.Logger = getFileLogger()
+		Logger = getFileLogger()
 	case "mongodb":
-		api.Logger = getMongoDbLogger()
+		Logger = getMongoDbLogger()
 	case "stdout":
-		api.Logger = getStdoutLogger()
+		Logger = getStdoutLogger()
 	case "dummy":
 		fallthrough
 	default:
-		api.Logger = getDummyLogger()
+		Logger = getDummyLogger()
 	}
 
 }
 
 // Default file log writter
 func getFileLogger() *slog.Logger {
-	file, err := os.OpenFile(api.ApplicationProperties.LoggerProperties.FileName, (os.O_APPEND | os.O_WRONLY | os.O_CREATE), 0640)
+	file, err := os.OpenFile(conf.ApplicationProperties.LoggerProperties.FileName, (os.O_APPEND | os.O_WRONLY | os.O_CREATE), 0640)
 
 	if err != nil {
-		panic(fmt.Sprintf("cant open file: %s (%s)", api.ApplicationProperties.LoggerProperties.FileName, err.Error()))
+		panic(utils.LOG_FILE_READ_ERROR)
 	}
 
 	textHandler := slog.NewTextHandler(file, &slog.HandlerOptions{
-		Level: slog.Level(api.ApplicationProperties.LoggerProperties.LogLevel),
+		Level: slog.Level(conf.ApplicationProperties.LoggerProperties.LogLevel),
 	})
 
 	return slog.New(textHandler)
@@ -52,31 +57,31 @@ func getFileLogger() *slog.Logger {
 // if fallback is not enabled in properties, raise panic on connection error
 func getMongoDbLogger() *slog.Logger {
 	clientOptions := options.Client().
-		ApplyURI(api.ApplicationProperties.LoggerProperties.MongoDbConnectionString).
+		ApplyURI(conf.ApplicationProperties.LoggerProperties.MongoDbConnectionString).
 		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
-		SetMaxPoolSize(api.ApplicationProperties.LoggerProperties.MaxPoolSize).
-		SetMinPoolSize(api.ApplicationProperties.LoggerProperties.MinPoolSize).
-		SetAppName(api.ApplicationProperties.AppName)
+		SetMaxPoolSize(conf.ApplicationProperties.LoggerProperties.MaxPoolSize).
+		SetMinPoolSize(conf.ApplicationProperties.LoggerProperties.MinPoolSize).
+		SetAppName(conf.ApplicationProperties.AppName)
 
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-		if api.ApplicationProperties.LoggerProperties.AllowFallback {
-			return api.FallbackLogger
+		if conf.ApplicationProperties.LoggerProperties.AllowFallback {
+			return FallbackLogger
 		}
-		panic(fmt.Sprintf("cant create connection to mongodb log server (%s)", err.Error()))
+		panic(utils.MONGODB_LOG_SERVER_CONNECTION_ERROR)
 	}
 
 	err = client.Ping(context.Background(), readpref.Nearest())
 	if err != nil {
-		if api.ApplicationProperties.LoggerProperties.AllowFallback {
-			return api.FallbackLogger
+		if conf.ApplicationProperties.LoggerProperties.AllowFallback {
+			return FallbackLogger
 		}
-		panic(fmt.Sprintf("cant reach mongodb log server (%s)", err.Error()))
+		panic(utils.MONGODB_LOG_SERVER_COMMUNICATION_ERROR)
 	}
 
 	logHandler := &MongoDBLogHandler{
 		client: client,
-		level:  slog.Level(api.ApplicationProperties.LoggerProperties.LogLevel),
+		level:  slog.Level(conf.ApplicationProperties.LoggerProperties.LogLevel),
 	}
 
 	return slog.New(logHandler)
@@ -96,7 +101,7 @@ func getStdoutLogger() *slog.Logger {
 // otherwise uses dummy logger to do nothinh on fail
 func getFallBackFileLogger() *slog.Logger {
 
-	if !api.ApplicationProperties.LoggerProperties.AllowFallback {
+	if !conf.ApplicationProperties.LoggerProperties.AllowFallback {
 		return getDummyLogger()
 	}
 
@@ -107,7 +112,7 @@ func getFallBackFileLogger() *slog.Logger {
 	}
 
 	textHandler := slog.NewTextHandler(file, &slog.HandlerOptions{
-		Level: slog.Level(api.ApplicationProperties.LoggerProperties.LogLevel),
+		Level: slog.Level(conf.ApplicationProperties.LoggerProperties.LogLevel),
 	})
 
 	return slog.New(textHandler)

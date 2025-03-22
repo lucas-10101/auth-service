@@ -1,5 +1,8 @@
 package conf
 
+// Global Application Properties
+var ApplicationProperties = &Properties{}
+
 // General application properties
 type Properties struct {
 	AppName string

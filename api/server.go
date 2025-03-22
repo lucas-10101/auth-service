@@ -3,15 +3,18 @@ package api
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/lucas-10101/auth-service/api/conf"
+	"github.com/lucas-10101/auth-service/api/utils"
 )
 
 func RunServer() {
 
-	if !ApplicationProperties.ServerProperties.UseHttps && ApplicationProperties.ServerProperties.RedirectHttps {
-		panic("https is disabled, cannot create redirect")
+	if !conf.ApplicationProperties.ServerProperties.UseHttps && conf.ApplicationProperties.ServerProperties.RedirectHttps {
+		panic(utils.HTTPS_REDIRECT_CONFIGURATION_MISMATCH)
 	}
 
-	if ApplicationProperties.ServerProperties.UseHttps {
+	if conf.ApplicationProperties.ServerProperties.UseHttps {
 		go runHttps()
 	}
 
@@ -19,17 +22,17 @@ func RunServer() {
 }
 
 func runHttps() {
-	address := fmt.Sprintf("%s:%d", ApplicationProperties.ServerProperties.Address, ApplicationProperties.ServerProperties.HttpsPort)
+	address := fmt.Sprintf("%s:%d", conf.ApplicationProperties.ServerProperties.Address, conf.ApplicationProperties.ServerProperties.HttpsPort)
 
 	err := http.ListenAndServeTLS(
 		address,
-		ApplicationProperties.ServerProperties.TlsCertificatePath,
-		ApplicationProperties.ServerProperties.TlsKeyPath,
+		conf.ApplicationProperties.ServerProperties.TlsCertificatePath,
+		conf.ApplicationProperties.ServerProperties.TlsKeyPath,
 		nil,
 	)
 
 	if err != nil {
-		panic(fmt.Sprintf("cannot start https server on %s, cause: %s", address, err.Error()))
+		panic(utils.HTTPS_SERVER_START_FAILURE)
 	}
 }
 
@@ -41,7 +44,7 @@ func (RedirectHandler) ServeHTTP(writter http.ResponseWriter, request *http.Requ
 	redirectTo := fmt.Sprintf(
 		"https://%s:%d/%s",
 		request.URL.Hostname(),
-		ApplicationProperties.ServerProperties.HttpsPort,
+		conf.ApplicationProperties.ServerProperties.HttpsPort,
 		request.URL.RequestURI(),
 	)
 
@@ -49,17 +52,17 @@ func (RedirectHandler) ServeHTTP(writter http.ResponseWriter, request *http.Requ
 }
 
 func runHttp() {
-	address := fmt.Sprintf("%s:%d", ApplicationProperties.ServerProperties.Address, ApplicationProperties.ServerProperties.HttpPort)
+	address := fmt.Sprintf("%s:%d", conf.ApplicationProperties.ServerProperties.Address, conf.ApplicationProperties.ServerProperties.HttpPort)
 
 	var handler http.Handler
 
-	if ApplicationProperties.ServerProperties.RedirectHttps {
+	if conf.ApplicationProperties.ServerProperties.RedirectHttps {
 		handler = &RedirectHandler{}
 	}
 
 	err := http.ListenAndServe(address, handler)
 	if err != nil {
-		panic(fmt.Sprintf("cannot start http server on %s, cause: %s", address, err.Error()))
+		panic(utils.HTTP_SERVER_START_FAILURE)
 	}
 
 }
