@@ -3,6 +3,7 @@ package conf
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"github.com/lucas-10101/auth-service/api/utils"
 )
 
-func GetPropertiesList() map[string]interface{} {
+func getPropertiesList() map[string]interface{} {
 
 	return map[string]interface{}{
 
@@ -26,6 +27,17 @@ func GetPropertiesList() map[string]interface{} {
 		"ApplicationProperties.ServerProperties.HttpsPort":          443,
 		"ApplicationProperties.ServerProperties.TlsKeyPath":         "/path/to/key",
 		"ApplicationProperties.ServerProperties.TlsCertificatePath": "/path/to/cert",
+
+		// Logger Properties
+		"ApplicationProperties.LoggerProperties.LogLevel":                int(slog.LevelInfo),
+		"ApplicationProperties.LoggerProperties.LogDriver":               "file",
+		"ApplicationProperties.LoggerProperties.AllowFallback":           true,
+		"ApplicationProperties.LoggerProperties.FileName":                "application.log",
+		"ApplicationProperties.LoggerProperties.MongoDbDatabaseName":     nil,
+		"ApplicationProperties.LoggerProperties.MongoDbCollectionName":   nil,
+		"ApplicationProperties.LoggerProperties.MongoDbConnectionString": nil,
+		"ApplicationProperties.LoggerProperties.MongoDbMaxPoolSize":      nil,
+		"ApplicationProperties.LoggerProperties.MongoDbMinPoolSize":      nil,
 	}
 }
 
@@ -86,17 +98,26 @@ func readPropertiesFile() map[string]string {
 	file, err := os.OpenFile("application.properties", (os.O_RDONLY), 0644)
 
 	if err != nil {
-		panic(utils.PROPERTIES_FILE_READ_ERROR)
+		panic(utils.PROPERTIES_FILE_READ_ERROR.WithErrorMessage(err))
 	}
 
+	defer file.Close()
+
 	properties := map[string]string{}
-	for scanner := bufio.NewScanner(file); scanner.Scan(); {
+	for lnNumber, scanner := 1, bufio.NewScanner(file); scanner.Scan(); lnNumber++ {
 		line := scanner.Text()
+		if pos := strings.Index(line, "#"); pos != -1 {
+			line = line[0:pos]
+		}
+
+		if len(strings.TrimSpace(line)) == 0 {
+			continue
+		}
 
 		parts := strings.Split(line, "=")
 
 		if len(parts) != 2 {
-			panic(utils.PROPERTIES_ENTRY_BAD_FORMAT)
+			panic(fmt.Sprintf("%s, at line: %d", utils.PROPERTIES_ENTRY_BAD_FORMAT.ToString(), lnNumber))
 		}
 
 		properties[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
@@ -106,5 +127,20 @@ func readPropertiesFile() map[string]string {
 }
 
 func WriteTemplate() {
+
+	file, err := os.OpenFile("application.properties", (os.O_WRONLY | os.O_CREATE), 0644)
+
+	if err != nil {
+		panic(utils.PROPERTIES_FILE_WRITE_ERROR.WithErrorMessage(err))
+	}
+
+	writter := bufio.NewWriter(file)
+
+	defer file.Close()
+	defer writter.Flush()
+
+	for propertyName, defaultValue := range getPropertiesList() {
+		writter.WriteString(fmt.Sprintf("%s=%v\n", propertyName, defaultValue))
+	}
 
 }

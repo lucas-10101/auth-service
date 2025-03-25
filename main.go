@@ -4,16 +4,16 @@ import (
 	"fmt"
 
 	"github.com/lucas-10101/auth-service/api/conf"
+	"github.com/lucas-10101/auth-service/api/logger"
 )
 
 func main() {
 	defer func() {
-		fmt.Println(recover())
+		if err := recover(); err != nil {
+			fmt.Printf("Recover: %v", err)
+		}
 	}()
 
-	//api.RunServer()
-
 	conf.LoadProperties()
-
-	fmt.Print(conf.ApplicationProperties)
+	logger.Setup()
 }

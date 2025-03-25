@@ -33,9 +33,9 @@ type LoggerProperties struct {
 	FileName string
 
 	// MongoDB Specific
-	DatabaseName            string
-	CollectionName          string
+	MongoDbDatabaseName     string
+	MongoDbCollectionName   string
 	MongoDbConnectionString string
-	MaxPoolSize             uint64
-	MinPoolSize             uint64
+	MongoDbMaxPoolSize      uint64
+	MongoDbMinPoolSize      uint64
 }

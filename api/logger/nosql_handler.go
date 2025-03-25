@@ -65,6 +65,6 @@ func (logger *MongoDBLogHandler) WithGroup(name string) slog.Handler {
 
 func (logger *MongoDBLogHandler) getCollection() *mongo.Collection {
 	return logger.client.
-		Database(conf.ApplicationProperties.LoggerProperties.DatabaseName).
-		Collection(conf.ApplicationProperties.LoggerProperties.CollectionName)
+		Database(conf.ApplicationProperties.LoggerProperties.MongoDbDatabaseName).
+		Collection(conf.ApplicationProperties.LoggerProperties.MongoDbCollectionName)
 }

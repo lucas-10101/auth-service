@@ -13,26 +13,26 @@ import (
 )
 
 var (
-	Logger         *slog.Logger
-	FallbackLogger *slog.Logger
+	logger         *slog.Logger
+	fallbackLogger *slog.Logger
 )
 
 // Configure application logger and fallback based on properties
 func Setup() {
 	// configure fallback first
-	FallbackLogger = getFallBackFileLogger()
+	fallbackLogger = getFallbackLogger()
 
 	switch conf.ApplicationProperties.LoggerProperties.LogDriver {
 	case "file":
-		Logger = getFileLogger()
+		logger = getFileLogger()
 	case "mongodb":
-		Logger = getMongoDbLogger()
+		logger = getMongoDbLogger()
 	case "stdout":
-		Logger = getStdoutLogger()
+		logger = getStdoutLogger()
 	case "dummy":
 		fallthrough
 	default:
-		Logger = getDummyLogger()
+		logger = getDummyLogger()
 	}
 
 }
@@ -42,7 +42,7 @@ func getFileLogger() *slog.Logger {
 	file, err := os.OpenFile(conf.ApplicationProperties.LoggerProperties.FileName, (os.O_APPEND | os.O_WRONLY | os.O_CREATE), 0640)
 
 	if err != nil {
-		panic(utils.LOG_FILE_READ_ERROR)
+		panic(utils.LOG_FILE_READ_ERROR.WithErrorMessage(err))
 	}
 
 	textHandler := slog.NewTextHandler(file, &slog.HandlerOptions{
@@ -59,24 +59,24 @@ func getMongoDbLogger() *slog.Logger {
 	clientOptions := options.Client().
 		ApplyURI(conf.ApplicationProperties.LoggerProperties.MongoDbConnectionString).
 		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
-		SetMaxPoolSize(conf.ApplicationProperties.LoggerProperties.MaxPoolSize).
-		SetMinPoolSize(conf.ApplicationProperties.LoggerProperties.MinPoolSize).
+		SetMaxPoolSize(conf.ApplicationProperties.LoggerProperties.MongoDbMaxPoolSize).
+		SetMinPoolSize(conf.ApplicationProperties.LoggerProperties.MongoDbMinPoolSize).
 		SetAppName(conf.ApplicationProperties.AppName)
 
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
 		if conf.ApplicationProperties.LoggerProperties.AllowFallback {
-			return FallbackLogger
+			return fallbackLogger
 		}
-		panic(utils.MONGODB_LOG_SERVER_CONNECTION_ERROR)
+		GetFallbackLogger().Error(utils.MONGODB_LOG_SERVER_CONNECTION_ERROR.WithErrorMessage(err))
 	}
 
 	err = client.Ping(context.Background(), readpref.Nearest())
 	if err != nil {
 		if conf.ApplicationProperties.LoggerProperties.AllowFallback {
-			return FallbackLogger
+			return fallbackLogger
 		}
-		panic(utils.MONGODB_LOG_SERVER_COMMUNICATION_ERROR)
+		GetFallbackLogger().Error(utils.MONGODB_LOG_SERVER_COMMUNICATION_ERROR.WithErrorMessage(err))
 	}
 
 	logHandler := &MongoDBLogHandler{
@@ -99,7 +99,7 @@ func getStdoutLogger() *slog.Logger {
 
 // configure fallback log handler if property [allowfallback = true]
 // otherwise uses dummy logger to do nothinh on fail
-func getFallBackFileLogger() *slog.Logger {
+func getFallbackLogger() *slog.Logger {
 
 	if !conf.ApplicationProperties.LoggerProperties.AllowFallback {
 		return getDummyLogger()
@@ -116,4 +116,12 @@ func getFallBackFileLogger() *slog.Logger {
 	})
 
 	return slog.New(textHandler)
+}
+
+func GetLogger() *slog.Logger {
+	return logger
+}
+
+func GetFallbackLogger() *slog.Logger {
+	return fallbackLogger
 }

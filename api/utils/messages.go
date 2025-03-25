@@ -1,12 +1,23 @@
 package utils
 
+import "fmt"
+
 type ErrorMessage string
+
+func (message ErrorMessage) WithErrorMessage(err error) string {
+	return fmt.Sprintf("%s, cause: %v", message, err)
+}
+
+func (message ErrorMessage) ToString() string {
+	return string(message)
+}
 
 const (
 
 	// Properties
 	PROPERTIES_FILE_READ_ERROR  = ErrorMessage("cannot open properties file, if dont exists run with --make-properties")
 	PROPERTIES_ENTRY_BAD_FORMAT = ErrorMessage("malformed entry on properties file")
+	PROPERTIES_FILE_WRITE_ERROR = ErrorMessage("cant create or write in application.properties")
 
 	// Logging
 	LOG_FILE_READ_ERROR                    = ErrorMessage("cannot open specified log file")
